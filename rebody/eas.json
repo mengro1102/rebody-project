@@ -1,0 +1,71 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "//": "Android 전용. iOS 프로필을 두지 않아 무료 빌드 쿼터를 낭비하지 않는다.",
+
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "development",
+        "EXPO_PUBLIC_BILLING_MODE": "mock"
+      }
+    },
+
+    "preview": {
+      "//": "내부 테스트용 APK. Play Console 내부 테스트 트랙 업로드에 사용.",
+      "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "preview",
+        "EXPO_PUBLIC_BILLING_MODE": "live"
+      }
+    },
+
+    "production": {
+      "//": "Play Store 제출용 AAB.",
+      "channel": "production",
+      "autoIncrement": "versionCode",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_BILLING_MODE": "live"
+      }
+    }
+  },
+
+  "submit": {
+    "production": {
+      "android": {
+        "//": "단계적 출시. 20%에서 크래시율·ANR을 확인하고 50% → 100%로 올린다.",
+        "serviceAccountKeyPath": "./play-service-account.json",
+        "track": "production",
+        "releaseStatus": "inProgress",
+        "rollout": 0.2,
+        "changesNotSentForReview": false
+      },
+      "internal": {
+        "serviceAccountKeyPath": "./play-service-account.json",
+        "track": "internal"
+      }
+    }
+  },
+
+  "update": {
+    "//": "JS/UI 변경은 여기로 배포한다. eas build는 네이티브 변경 시에만.",
+    "production": { "channel": "production" },
+    "preview": { "channel": "preview" }
+  }
+}
