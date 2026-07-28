@@ -1,0 +1,26 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+npm-debug.*
+yarn-error.*
+
+# 절대 커밋 금지 — 비밀키
+.env
+.env.local
+.env.*.local
+supabase/.env.local
+google-services.json
+play-service-account.json
+*.keystore
+*.jks
+
+# 평가용 이미지 (용량)
+eval/golden/*.jpg
+eval/golden/*.png
+eval/results/
+
+.DS_Store
+*.tsbuildinfo
+coverage/

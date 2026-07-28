@@ -34,8 +34,9 @@ Gemini가 인식한 음식명으로 실시간 조회하는 지금 구조에서�
 
 ## B. 인프라 배포
 
+- [ ] `supabase init` — `supabase/config.toml`이 없으면 `link`/`db push`가 실패한다
 - [ ] `supabase link --project-ref <ref>`
-- [ ] `supabase db push` — 마이그레이션 5개 적용
+- [ ] `supabase db push` — 마이그레이션 6개 적용
 - [ ] Vault에 시크릿 등록 (cron이 Edge Function을 호출하는 데 필요)
   ```sql
   select vault.create_secret('<ref>.supabase.co', 'project_host');

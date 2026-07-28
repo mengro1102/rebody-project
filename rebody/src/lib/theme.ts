@@ -33,5 +33,7 @@ export const typography = {
   subtitle: { fontSize: 16, fontWeight: "600" as const },
   body: { fontSize: 15, fontWeight: "400" as const },
   caption: { fontSize: 13, fontWeight: "400" as const },
+  // fontVariant는 RN 타입이 가변 배열(FontVariant[])을 요구하므로 이 객체에는
+  // as const를 걸지 않는다. 리터럴이 필요한 fontWeight만 개별로 고정한다.
   mono: { fontSize: 40, fontWeight: "700" as const, fontVariant: ["tabular-nums" as const] },
-} as const;
+};
