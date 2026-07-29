@@ -126,7 +126,11 @@ export default function SettingsRoute() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Section title="계정">
         <Row label="이메일" value={profile?.email ?? "-"} />
-        <Row label="시간대" value={profile?.timezone ?? "-"} />
+        <Row
+          label="시간대"
+          value={profile?.timezone ?? "-"}
+          action={{ text: "변경", onPress: () => router.push("/settings/timezone") }}
+        />
         <Row
           label="플랜"
           value={isPro() ? "Pro" : "무료"}

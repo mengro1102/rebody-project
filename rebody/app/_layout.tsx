@@ -61,6 +61,7 @@ export default function RootLayout() {
           <Stack.Screen name="feedback" options={{ title: "주간 리포트" }} />
           <Stack.Screen name="settings/index" options={{ title: "설정" }} />
           <Stack.Screen name="settings/notifications" options={{ title: "알림 설정" }} />
+          <Stack.Screen name="settings/timezone" options={{ title: "시간대 변경" }} />
         </Stack>
       ) : (
         <Splash />

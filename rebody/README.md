@@ -44,7 +44,7 @@ ReBody는 **사용자의 하루가 어떻게 반복되는지(사이클)를 먼�
 |---|---|
 | [`docs/00_ANALYSIS.md`](docs/00_ANALYSIS.md) | **착수 문서 분석 리포트** — 정정 사항과 착수 전 리스크 12건 |
 | [`docs/01_COST.md`](docs/01_COST.md) | 비용 구조와 절감 장치 |
-| [`docs/02_ROADMAP.md`](docs/02_ROADMAP.md) | Phase 0~7 실행 순서 |
+| [`docs/02_ROADMAP.md`](docs/02_ROADMAP.md) | Phase 0~7 실행 순서 · 포지셔닝 확정 |
 | [`docs/03_DATA_SAFETY.md`](docs/03_DATA_SAFETY.md) | Play Console Data Safety 신고 초안 |
 | [`docs/04_PRIVACY_POLICY.md`](docs/04_PRIVACY_POLICY.md) | 개인정보처리방침 (GitHub Pages 게시용) |
 | [`docs/05_LAUNCH_CHECKLIST.md`](docs/05_LAUNCH_CHECKLIST.md) | 출시 체크리스트 |
@@ -65,7 +65,7 @@ rebody/
 │   ├── domain/                 ← 순수 로직. 테스트가 여기 집중된다.
 │   │   ├── cycle.ts            사이클 해석 (타임존 없음, civil-date 정수 연산)
 │   │   ├── FastingScheduler.ts 벽시계 → 절대시각 변환 (여기서만 TZ를 안다)
-│   │   ├── presets.ts          근무 패턴 프리셋 4종
+│   │   ├── presets.ts          생활 패턴 프리셋 9종 (일반·불규칙·교대·출장)
 │   │   ├── nutrition.ts        매크로 비례 재계산
 │   │   └── safety.ts           연령·BMI·임신 게이트
 │   ├── store/                  Zustand
@@ -79,7 +79,7 @@ rebody/
 ├── scripts/
 │   ├── eval-food-scanner.ts    Phase 3a Go/No-Go 게이트
 │   └── probe-mfds.ts           MFDS 응답 필드 자동 검증
-└── __tests__/                  63 tests
+└── __tests__/                  79 tests
 ```
 
 ### 설계상 중요한 경계 두 개
@@ -115,7 +115,7 @@ supabase secrets set --env-file supabase/.env.local # GEMINI / MFDS / FCM
 supabase functions deploy                           # Edge Function 7개
 
 # 앱
-npm test                      # 도메인 로직 63 tests
+npm test                      # 도메인 로직 79 tests
 npm run typecheck
 npm start
 ```

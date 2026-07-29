@@ -28,6 +28,9 @@ export type AnalyticsEvent =
   | "food_scan_quota_exceeded"
   | "meal_logged"
   | "ics_exported"
+  // 시간대 변경 — 출장 사용자 비중을 보는 지표. 지역명은 개인정보가 아니지만
+  // 이동 이력이 되므로 IANA 존 이름 외에는 아무것도 싣지 않는다.
+  | "timezone_changed"
   // 피드백
   | "feedback_viewed"
   | "feedback_applied"

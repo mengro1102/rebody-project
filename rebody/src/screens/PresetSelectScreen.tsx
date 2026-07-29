@@ -1,8 +1,12 @@
-// Phase 2 — 프리셋 선택 + 자연어 보정 (하이브리드 온보딩)
+// 생활 패턴 선택 + 자연어 보정 (하이브리드 온보딩)
 //
-// 흐름: 프리셋 4종 중 선택 → 사이클 기준일 입력 → (선택) 자유 텍스트 보정
+// 흐름: 패턴 선택 → 기준값(기준일 또는 기상 시각) → (선택) 자유 텍스트 보정
 // 자연어는 "처음부터 만들기"가 아니라 "이미 만들어진 것을 고치기"에만 쓴다.
 // 오파싱 리스크와 토큰 비용이 둘 다 크게 줄어든다.
+//
+// 화면 설계 원칙: 첫 화면에는 "규칙적인 하루"만 펼쳐 두고 나머지는 접는다.
+// 시장 대다수는 일반형이고, 교대·출장 그룹은 필요한 사람만 열어보면 된다.
+// 프리셋을 9개 다 늘어놓으면 대다수 사용자가 "내 앱이 아닌가?" 하고 이탈한다.
 
 import { useState } from "react";
 import {
@@ -15,7 +19,15 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { PRESET_LIST, type PresetKey } from "@/domain/presets";
+import {
+  DEFAULT_PRESET_KEY,
+  GROUP_LABELS,
+  GROUP_ORDER,
+  PRESET_LIST,
+  presetsByGroup,
+  type PresetGroup,
+  type PresetKey,
+} from "@/domain/presets";
 import { useScheduleStore } from "@/store/useScheduleStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { todayInTimezone } from "@/domain/FastingScheduler";
@@ -28,26 +40,41 @@ export default function PresetSelectScreen({ onComplete }: { onComplete?: () => 
   const profile = useAuthStore((s) => s.profile);
   const timezone = profile?.timezone ?? "Asia/Seoul";
 
-  const { createFromPreset, refineWithText, loading } = useScheduleStore();
+  const { createFromPreset, refineWithText } = useScheduleStore();
 
   const [step, setStep] = useState<Step>("preset");
-  const [selected, setSelected] = useState<PresetKey | null>(null);
+  const [selected, setSelected] = useState<PresetKey>(DEFAULT_PRESET_KEY);
+  const [openGroups, setOpenGroups] = useState<PresetGroup[]>(["regular"]);
   const [anchorDate, setAnchorDate] = useState(() => todayInTimezone(timezone));
+  const [wakeTime, setWakeTime] = useState("07:00");
   const [refineText, setRefineText] = useState("");
   const [followUp, setFollowUp] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const preset = PRESET_LIST.find((p) => p.key === selected) ?? null;
+  const needsWakeTime = preset?.anchorKind === "wake_time";
+
+  const toggleGroup = (g: PresetGroup) =>
+    setOpenGroups((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
 
   const handleCreate = async () => {
-    if (!selected) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(anchorDate)) {
+    if (!preset) return;
+
+    if (needsWakeTime) {
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(wakeTime)) {
+        Alert.alert("시각 형식", "24시간제 HH:MM으로 입력해 주세요. 예: 07:30");
+        return;
+      }
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(anchorDate)) {
       Alert.alert("날짜 형식", "YYYY-MM-DD 형식으로 입력해 주세요. 예: 2026-07-27");
       return;
     }
+
     setBusy(true);
     try {
-      await createFromPreset(selected, anchorDate, timezone);
+      // 1일 사이클은 기준일이 의미를 갖지 않으므로 오늘로 고정한다.
+      const anchor = needsWakeTime ? todayInTimezone(timezone) : anchorDate;
+      await createFromPreset(preset.key, anchor, timezone, { wakeTime });
       setStep("refine");
     } catch (e) {
       Alert.alert("오류", e instanceof Error ? e.message : "스케줄 생성에 실패했습니다.");
@@ -80,65 +107,110 @@ export default function PresetSelectScreen({ onComplete }: { onComplete?: () => 
   };
 
   const finish = () => {
-    track("onboarding_complete", { preset: selected ?? "unknown" });
+    track("onboarding_complete", { preset: selected });
     setStep("done");
     onComplete?.();
   };
 
-  // ── 1) 프리셋 선택 ───────────────────────────────────────
+  // ── 1) 생활 패턴 선택 ────────────────────────────────────
   if (step === "preset") {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>근무 패턴을 골라주세요</Text>
+        <Text style={styles.title}>어떤 하루를 보내세요?</Text>
         <Text style={styles.subtitle}>
           정확히 맞지 않아도 괜찮아요. 다음 단계에서 말로 고칠 수 있어요.
         </Text>
 
-        {PRESET_LIST.map((p) => (
-          <Pressable
-            key={p.key}
-            onPress={() => setSelected(p.key)}
-            style={[styles.card, selected === p.key && styles.cardSelected]}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{p.title}</Text>
-              <Text style={styles.cardBadge}>{p.cycleLengthDays}일 주기</Text>
-            </View>
-            <Text style={styles.cardSubtitle}>{p.subtitle}</Text>
-            <Text style={styles.cardDesc}>{p.description}</Text>
-          </Pressable>
-        ))}
+        {GROUP_ORDER.map((group) => {
+          const items = presetsByGroup(group);
+          const open = openGroups.includes(group);
+          const label = GROUP_LABELS[group];
+          const selectedHere = items.some((p) => p.key === selected);
 
-        <Pressable
-          style={[styles.primaryBtn, !selected && styles.btnDisabled]}
-          disabled={!selected}
-          onPress={() => setStep("anchor")}
-        >
+          return (
+            <View key={group} style={styles.group}>
+              <Pressable style={styles.groupHeader} onPress={() => toggleGroup(group)}>
+                <View style={styles.flex}>
+                  <Text style={styles.groupTitle}>
+                    {label.title}
+                    {!open && selectedHere ? " · 선택됨" : ""}
+                  </Text>
+                  <Text style={styles.groupCaption}>{label.caption}</Text>
+                </View>
+                <Text style={styles.groupChevron}>{open ? "−" : "+"}</Text>
+              </Pressable>
+
+              {open &&
+                items.map((p) => (
+                  <Pressable
+                    key={p.key}
+                    onPress={() => setSelected(p.key)}
+                    style={[styles.card, selected === p.key && styles.cardSelected]}
+                  >
+                    <View style={styles.cardHeader}>
+                      <Text style={styles.cardTitle}>{p.title}</Text>
+                      <Text style={styles.cardBadge}>
+                        {p.cycleLengthDays === 1 ? "매일 반복" : `${p.cycleLengthDays}일 주기`}
+                      </Text>
+                    </View>
+                    <Text style={styles.cardSubtitle}>{p.subtitle}</Text>
+                    <Text style={styles.cardDesc}>{p.description}</Text>
+                  </Pressable>
+                ))}
+            </View>
+          );
+        })}
+
+        <Pressable style={styles.primaryBtn} onPress={() => setStep("anchor")}>
           <Text style={styles.primaryBtnText}>다음</Text>
         </Pressable>
       </ScrollView>
     );
   }
 
-  // ── 2) 사이클 기준일 ─────────────────────────────────────
+  // ── 2) 기준값 (기준일 또는 기상 시각) ────────────────────
   if (step === "anchor") {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.title}>{preset?.anchorQuestion}</Text>
         <Text style={styles.subtitle}>
-          이 날짜를 기준으로 사이클이 반복돼요. 나중에 바꿀 수 있어요.
+          {needsWakeTime
+            ? "이 시각을 기준으로 첫 끼와 단식 시간을 잡아드려요. 나중에 바꿀 수 있어요."
+            : "이 날짜를 기준으로 사이클이 반복돼요. 나중에 바꿀 수 있어요."}
         </Text>
 
-        <TextInput
-          style={styles.input}
-          value={anchorDate}
-          onChangeText={setAnchorDate}
-          placeholder="2026-07-27"
-          placeholderTextColor={colors.textFaint}
-          keyboardType="numbers-and-punctuation"
-          autoCorrect={false}
-          maxLength={10}
-        />
+        {needsWakeTime ? (
+          <>
+            <TextInput
+              style={styles.input}
+              value={wakeTime}
+              onChangeText={setWakeTime}
+              placeholder="07:00"
+              placeholderTextColor={colors.textFaint}
+              keyboardType="numbers-and-punctuation"
+              autoCorrect={false}
+              maxLength={5}
+            />
+            <View style={styles.quickRow}>
+              {["05:30", "06:30", "07:30", "09:00"].map((t) => (
+                <Pressable key={t} style={styles.quickChip} onPress={() => setWakeTime(t)}>
+                  <Text style={styles.quickChipText}>{t}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        ) : (
+          <TextInput
+            style={styles.input}
+            value={anchorDate}
+            onChangeText={setAnchorDate}
+            placeholder="2026-07-27"
+            placeholderTextColor={colors.textFaint}
+            keyboardType="numbers-and-punctuation"
+            autoCorrect={false}
+            maxLength={10}
+          />
+        )}
 
         <View style={styles.btnRow}>
           <Pressable style={styles.secondaryBtn} onPress={() => setStep("preset")}>
@@ -166,16 +238,16 @@ export default function PresetSelectScreen({ onComplete }: { onComplete?: () => 
 
       <View style={styles.examples}>
         <Text style={styles.exampleLabel}>이렇게 말해보세요</Text>
-        <Text style={styles.exampleText}>· "수요일은 오후 2시부터 10시까지 일해요"</Text>
-        <Text style={styles.exampleText}>· "야간 근무 날에는 운동을 안 해요"</Text>
-        <Text style={styles.exampleText}>· "주말에도 오전 9시에 첫 끼를 먹고 싶어요"</Text>
+        <Text style={styles.exampleText}>· "수요일은 오후 2시부터 10시까지 알바예요"</Text>
+        <Text style={styles.exampleText}>· "화·목은 저녁 7시에 운동해요"</Text>
+        <Text style={styles.exampleText}>· "주말에는 10시쯤 첫 끼를 먹고 싶어요"</Text>
       </View>
 
       <TextInput
         style={[styles.input, styles.textarea]}
         value={refineText}
         onChangeText={setRefineText}
-        placeholder="예: 금요일은 오후 근무예요"
+        placeholder="예: 금요일은 오후에 일정이 있어요"
         placeholderTextColor={colors.textFaint}
         multiline
         maxLength={500}
@@ -213,6 +285,17 @@ const styles = StyleSheet.create({
   title: { ...typography.title, color: colors.text, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg, lineHeight: 21 },
 
+  group: { marginBottom: spacing.md },
+  groupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  groupTitle: { ...typography.subtitle, color: colors.text },
+  groupCaption: { ...typography.caption, color: colors.textFaint, marginTop: 2 },
+  groupChevron: { ...typography.title, color: colors.textMuted, paddingHorizontal: spacing.sm },
+
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
@@ -239,6 +322,15 @@ const styles = StyleSheet.create({
   },
   textarea: { minHeight: 96, textAlignVertical: "top" },
   counter: { ...typography.caption, color: colors.textFaint, textAlign: "right", marginTop: spacing.xs },
+
+  quickRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
+  quickChip: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  quickChipText: { ...typography.caption, color: colors.text },
 
   examples: {
     backgroundColor: colors.surfaceAlt,
