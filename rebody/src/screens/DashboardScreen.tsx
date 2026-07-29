@@ -94,7 +94,7 @@ export default function DashboardScreen() {
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>스케줄이 아직 없어요</Text>
         <Text style={styles.emptyBody}>
-          근무 패턴을 등록하면 나에게 맞는 단식 시간을 자동으로 잡아드릴게요.
+          생활 패턴을 등록하면 나에게 맞는 단식 시간을 자동으로 잡아드릴게요.
         </Text>
       </View>
     );

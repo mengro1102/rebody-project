@@ -22,6 +22,11 @@ export interface UserRow {
   birth_year: number | null;
   height_cm: number | null;
   weight_kg: number | null;
+  // 안전성 자가 문진 (20260728000100_safety_profile.sql).
+  // 앞의 둘은 단식 스케줄 차단 조건, 마지막은 경고 조건이다.
+  is_pregnant_or_nursing: boolean;
+  has_eating_disorder_history: boolean;
+  has_diabetes_on_medication: boolean;
   is_premium: boolean;
   fcm_token: string | null;
   onboarded_at: string | null;

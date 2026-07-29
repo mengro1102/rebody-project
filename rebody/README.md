@@ -48,7 +48,7 @@ ReBody는 **사용자의 하루가 어떻게 반복되는지(사이클)를 먼�
 | [`docs/03_DATA_SAFETY.md`](docs/03_DATA_SAFETY.md) | Play Console Data Safety 신고 초안 |
 | [`docs/04_PRIVACY_POLICY.md`](docs/04_PRIVACY_POLICY.md) | 개인정보처리방침 (GitHub Pages 게시용) |
 | [`docs/05_LAUNCH_CHECKLIST.md`](docs/05_LAUNCH_CHECKLIST.md) | 출시 체크리스트 |
-| [`docs/06_MY_TASKS.md`](docs/06_MY_TASKS.md) | **내가 해야 할 일 — 순차 마일스톤 M0~M7** |
+| [`docs/06_MY_TASKS.md`](docs/06_MY_TASKS.md) | **내가 해야 할 일 — 개발 트랙 D1~D6 / 배포 트랙 R0~R5** |
 
 ---
 
@@ -56,6 +56,11 @@ ReBody는 **사용자의 하루가 어떻게 반복되는지(사이클)를 먼�
 
 ```
 rebody/
+├── app/                        ← expo-router 라우트. 온보딩 게이트가 여기 있다.
+│   ├── _layout.tsx             세션 → 동의 → 안전성 → 스케줄 순서로 분기
+│   ├── sign-in.tsx
+│   ├── onboarding/             consent(동의 3분할) · profile(안전성) · schedule(프리셋)
+│   └── settings/
 ├── src/
 │   ├── domain/                 ← 순수 로직. 테스트가 여기 집중된다.
 │   │   ├── cycle.ts            사이클 해석 (타임존 없음, civil-date 정수 연산)
@@ -105,7 +110,7 @@ cp .env.example .env          # Supabase URL / anon key 채우기
 
 # 백엔드
 supabase link --project-ref <ref>
-supabase db push                                   # 마이그레이션 6개
+supabase db push                                   # 마이그레이션 7개
 supabase secrets set --env-file supabase/.env.local # GEMINI / MFDS / FCM
 supabase functions deploy                           # Edge Function 7개
 

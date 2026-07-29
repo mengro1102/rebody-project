@@ -32,7 +32,15 @@ import { colors, radius, spacing, typography } from "@/lib/theme";
 const MAX_WIDTH = 1024;
 const JPEG_QUALITY = 0.7;
 
-export default function ScannerScreen({ onDone }: { onDone?: () => void }) {
+export default function ScannerScreen({
+  onDone,
+  // 쿼터 초과에서 "Pro 알아보기"를 누른 경우와 정상 저장 후 닫는 경우는 목적지가 다르다.
+  // 라우터가 둘을 구분할 수 있어야 하므로 분리한다. 넘기지 않으면 onDone과 동일하게 동작한다.
+  onRequestUpgrade,
+}: {
+  onDone?: () => void;
+  onRequestUpgrade?: () => void;
+}) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
@@ -89,7 +97,7 @@ export default function ScannerScreen({ onDone }: { onDone?: () => void }) {
         if (e.code === "quota_exceeded") {
           Alert.alert("오늘 스캔을 모두 사용했어요", e.message, [
             { text: "닫기", style: "cancel" },
-            { text: "Pro 알아보기", onPress: () => onDone?.() },
+            { text: "Pro 알아보기", onPress: () => (onRequestUpgrade ?? onDone)?.() },
           ]);
           return;
         }

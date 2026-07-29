@@ -75,7 +75,7 @@
 |---|---|
 | `npm test` | ✅ **63 tests / 3 suites 통과** |
 | `npm run typecheck` | ✅ **0 errors** (theme.ts `fontVariant` 1건 수정 완료) |
-| 마이그레이션 6개 · Edge Function 7개 · cron 4건 | ✅ 존재 |
+| 마이그레이션 7개 · Edge Function 7개 · cron 4건 | ✅ 존재 (D2에서 safety_profile 1건 추가) |
 | `.gitignore` · `.env.example` | ✅ 복구 완료 (웹 업로드가 점 파일을 누락시켰음) |
 
 | # | 남은 일 | 담당 |
@@ -89,27 +89,45 @@
 
 ---
 
-## D2 — 앱 셸 ◀ **최우선. 여기가 막히면 배포 트랙 전체가 멈춥니다**
+## D2 — 앱 셸 ✅ **완료 (2026-07-28)**
 
-**현 상태: 화면 5개는 있는데 그 화면을 띄우는 앱이 없습니다.**
-`main`이 `expo-router/entry`인데 `app/` 디렉터리가 없어 라우트가 0개고,
-`src/screens/*`를 import하는 코드가 레포에 존재하지 않습니다. `npm start`도 `eas build`도 진행되지 않습니다.
+착수 전 상태: 화면 5개는 있는데 그 화면을 띄우는 앱이 없었습니다. `app/` 디렉터리가 없어
+라우트가 0개였고 `src/screens/*`를 import하는 코드가 레포에 존재하지 않았습니다.
 
-| # | 할 일 | 왜 |
+| # | 할 일 | 결과 |
 |---|---|---|
-| D2-1 | `app/` 라우트 — `_layout.tsx`(세션 가드) · `index` · `onboarding` · `scanner` · `settings` · `paywall` | 기존 화면 연결만 하면 됨 |
-| D2-2 | 로그인·회원가입 화면 | `signUpWithEmail` 존재, UI 없음 |
-| D2-3 | **동의 3분할** (약관 / 민감정보 / 국외이전 / 선택 마케팅) | `grantConsents()` 존재, UI 없음 — **국내법 필수** |
-| D2-4 | **안전성 온보딩** (연령·BMI·임신 게이트) | `checkEligibility` 존재, 호출 화면 없음 — **Play 정책** |
-| D2-5 | 계정 삭제 진입점 | `delete_my_account` RPC 존재 — **Play 필수 요건** |
-| D2-6 | ICS 내보내기 버튼 | `export-ics` 존재, 클라이언트 호출 없음 |
-| D2-7 | `babel.config.js` | Expo 빌드 전제 |
-| D2-8 | `assets/` 4종 — `icon` · `splash` · `adaptive-icon` · `notification-icon` | `app.config.ts`가 참조 중. 없으면 빌드 실패 |
+| D2-1 | `app/` 라우트 + 온보딩 게이트 | ✅ `_layout.tsx` · `index` · `sign-in` · `onboarding/{consent,profile,schedule}` · `scanner` · `paywall` · `feedback` · `settings/{index,notifications}` |
+| D2-2 | 로그인·회원가입 화면 | ✅ `app/sign-in.tsx` |
+| D2-3 | **동의 3분할** | ✅ `app/onboarding/consent.tsx` — 약관/개인정보/민감정보/국외이전 개별 체크 + 선택 마케팅. 거부 이력도 기록 |
+| D2-4 | **안전성 온보딩** | ✅ `app/onboarding/profile.tsx` — 연령·BMI·임신·섭식장애·혈당약. 입력 즉시 판정 미리보기 |
+| D2-5 | 계정 삭제 진입점 | ✅ `app/settings/index.tsx` — 2단계 확인 후 `delete_my_account` |
+| D2-6 | ICS 내보내기 | ✅ 설정 → 캘린더로 내보내기 (`text/calendar` 직접 fetch → 공유 시트) |
+| D2-7 | `babel.config.js` | ✅ |
+| D2-8 | `assets/` 4종 | ⚠️ **플레이스홀더 생성됨** — 빌드는 통과합니다. 실제 디자인은 R4-1에서 교체 (`assets/README.md`) |
 
-> D2-3·D2-4·D2-5는 **없으면 심사에서 막히거나 국내법 위반**입니다. 화면 작업 중 가장 먼저.
-> D2-1~D2-6은 제게 넘기셔도 됩니다. D2-8 이미지는 R4-1 아이콘 작업과 함께 하는 게 효율적입니다.
+### 작업 중 함께 처리한 것
 
-**게이트**: `npm start`로 로그인 → 동의 → 안전성 게이트 → 프리셋 → 대시보드가 이어질 것.
+- **`consents` 재동의 판정** — `hasRequiredConsents()`. append-only 테이블이라 kind별 **최신** 행만 보고,
+  `POLICY_VERSION`이 오르면 자동으로 재동의를 요구합니다.
+- **마이그레이션 1건 추가** (`20260728000100_safety_profile.sql`) — 임신·수유 / 섭식장애 병력 /
+  혈당약 복용 응답을 저장할 컬럼이 없었습니다. 로컬에만 두면 **재설치 한 번으로 단식 차단이 풀립니다.**
+  → 마이그레이션은 이제 **7개**입니다.
+- **온보딩 완료 기준을 `onboarded_at`으로 고정** — 스케줄 유무로 판단하면 안전 게이트에 걸린 사용자가
+  온보딩에 영원히 갇힙니다. 차단된 사용자는 스케줄 없이 식사 기록만 쓰는 것이 정상 상태입니다.
+- **스캐너 쿼터 초과 → 페이월 분기** — `onRequestUpgrade`를 분리했습니다. 기존에는 정상 저장과
+  쿼터 초과가 같은 콜백이라 라우터가 목적지를 구분할 수 없었습니다.
+
+### 검증 결과
+
+```
+npm run typecheck        → 0 errors
+npm test                 → 63 passed
+npx expo export          → Bundled 1189 modules  (라우트·별칭·엔트리 전부 해석됨)
+```
+
+**남은 것**: `google-services.json`이 없어 config 파싱 경고가 납니다. R1-2에서 배치하면 사라집니다.
+
+**게이트**: ✅ 통과. 실기기 확인은 R1에서 합니다.
 
 ---
 
@@ -163,7 +181,7 @@ Supabase는 무료이고 승인이 필요 없으므로 **개발 트랙**입니�
 | D4-1 | `supabase init` — `config.toml`이 없어 `link`/`db push`가 바로 실패합니다 |
 | D4-2 | `cp .env.example .env` → URL / anon key 입력 |
 | D4-3 | `supabase link --project-ref <ref>` |
-| D4-4 | `supabase db push` — 마이그레이션 **6개** |
+| D4-4 | `supabase db push` — 마이그레이션 **7개** |
 | D4-5 | Vault 시크릿 등록 (cron이 Edge Function 호출에 사용) |
 | D4-6 | `supabase secrets set --env-file supabase/.env.local` — GEMINI / MFDS / FCM |
 | D4-7 | `supabase functions deploy` — **7개** |
