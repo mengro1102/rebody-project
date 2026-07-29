@@ -25,6 +25,7 @@ import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { rescalePortion, sourceLabel, type ScannedFood } from "@/domain/nutrition";
 import { NUTRITION_ESTIMATE_DISCLAIMER } from "@/domain/safety";
 import { EdgeFunctionError } from "@/lib/supabase";
+import { env } from "@/lib/env";
 import { colors, radius, spacing, typography } from "@/lib/theme";
 
 // Gemini 입력 토큰은 이미지 해상도에 비례한다. 음식 식별에는 1024px이면 충분하고,
@@ -95,9 +96,13 @@ export default function ScannerScreen({
       setPhotoUri(null);
       if (e instanceof EdgeFunctionError) {
         if (e.code === "quota_exceeded") {
+          // 수익화가 꺼져 있으면 업그레이드가 아니라 "왜 제한이 있는지" 안내로 보낸다.
           Alert.alert("오늘 스캔을 모두 사용했어요", e.message, [
             { text: "닫기", style: "cancel" },
-            { text: "Pro 알아보기", onPress: () => (onRequestUpgrade ?? onDone)?.() },
+            {
+              text: env.monetizationEnabled ? "Pro 알아보기" : "자세히",
+              onPress: () => (onRequestUpgrade ?? onDone)?.(),
+            },
           ]);
           return;
         }

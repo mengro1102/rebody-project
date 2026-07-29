@@ -131,13 +131,27 @@ export default function SettingsRoute() {
           value={profile?.timezone ?? "-"}
           action={{ text: "변경", onPress: () => router.push("/settings/timezone") }}
         />
-        <Row
-          label="플랜"
-          value={isPro() ? "Pro" : "무료"}
-          action={isPro() ? undefined : { text: "업그레이드", onPress: () => router.push("/paywall") }}
-        />
-        {subscription?.expires_at && (
-          <Row label="다음 갱신" value={subscription.expires_at.slice(0, 10)} />
+        {/* 수익화가 꺼져 있는 동안에는 업그레이드 유도를 노출하지 않는다.
+            결제할 수 없는 상태의 "업그레이드" 버튼은 사용자를 속이는 UI다. */}
+        {env.monetizationEnabled ? (
+          <>
+            <Row
+              label="플랜"
+              value={isPro() ? "Pro" : "무료"}
+              action={
+                isPro() ? undefined : { text: "업그레이드", onPress: () => router.push("/paywall") }
+              }
+            />
+            {subscription?.expires_at && (
+              <Row label="다음 갱신" value={subscription.expires_at.slice(0, 10)} />
+            )}
+          </>
+        ) : (
+          <Row
+            label="플랜"
+            value="무료"
+            action={{ text: "안내", onPress: () => router.push("/paywall") }}
+          />
         )}
       </Section>
 

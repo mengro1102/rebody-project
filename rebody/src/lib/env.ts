@@ -12,15 +12,31 @@ function required(name: string, value: string | undefined): string {
   return value;
 }
 
+/**
+ * 수익화 전면 차단 스위치 (docs/07_MONETIZATION_DEFERRED.md).
+ *
+ * 운영자가 전문연구요원 복무 중이라 영리 활동을 하지 않는다. MVP는 무료로만 배포한다.
+ * 환경변수가 아니라 **소스 상수**인 것이 의도다 — 빌드 설정을 잘못 만져서
+ * 결제 UI가 켜지는 사고를 막는다. 복무 종료 후 이 값을 true로 되돌리는 것이 복원의 시작점이다.
+ */
+export const MONETIZATION_ENABLED = false as boolean;
+
 export const env = {
   supabaseUrl: required("EXPO_PUBLIC_SUPABASE_URL", process.env.EXPO_PUBLIC_SUPABASE_URL),
   supabaseAnonKey: required("EXPO_PUBLIC_SUPABASE_ANON_KEY", process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY),
 
   appEnv: (process.env.EXPO_PUBLIC_ENV ?? "development") as "development" | "preview" | "production",
 
-  // Play Console 등록 전에는 mock. react-native-purchases는 Expo Go에서 동작하지 않는다.
-  billingMode: (process.env.EXPO_PUBLIC_BILLING_MODE ?? "mock") as "mock" | "live",
-  revenueCatAndroidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "",
+  monetizationEnabled: MONETIZATION_ENABLED,
+
+  // 수익화가 꺼져 있는 동안에는 환경변수와 무관하게 항상 mock이다.
+  // react-native-purchases는 Expo Go에서도 동작하지 않으므로 mock이 안전한 기본값이다.
+  billingMode: (MONETIZATION_ENABLED
+    ? (process.env.EXPO_PUBLIC_BILLING_MODE ?? "mock")
+    : "mock") as "mock" | "live",
+  revenueCatAndroidKey: MONETIZATION_ENABLED
+    ? (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "")
+    : "",
 
   privacyPolicyUrl:
     process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://mengro1102.github.io/rebody-policy/",

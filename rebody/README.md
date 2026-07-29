@@ -32,7 +32,7 @@ ReBody는 **사용자의 하루가 어떻게 반복되는지(사이클)를 먼�
 | AI | Gemini `gemini-3.1-flash-lite` | ~$2/월 (DAU 100) |
 | 영양 DB | 식약처 공공데이터 | $0 |
 | 푸시 | FCM HTTP v1 | $0 |
-| 결제 | RevenueCat + Google Play Billing | $0 (MTR $2,500 이하) |
+| 결제 | ⛔ 미사용 (복무 중 수익화 보류) | — |
 
 **필수 고정비는 Google Play 개발자 등록 $25 한 번뿐입니다.** → [`docs/01_COST.md`](docs/01_COST.md)
 
@@ -49,6 +49,7 @@ ReBody는 **사용자의 하루가 어떻게 반복되는지(사이클)를 먼�
 | [`docs/04_PRIVACY_POLICY.md`](docs/04_PRIVACY_POLICY.md) | 개인정보처리방침 (GitHub Pages 게시용) |
 | [`docs/05_LAUNCH_CHECKLIST.md`](docs/05_LAUNCH_CHECKLIST.md) | 출시 체크리스트 |
 | [`docs/06_MY_TASKS.md`](docs/06_MY_TASKS.md) | **내가 해야 할 일 — 개발 트랙 D1~D6 / 배포 트랙 R0~R5** |
+| [`docs/07_MONETIZATION_DEFERRED.md`](docs/07_MONETIZATION_DEFERRED.md) | **수익화 보류 결정과 복원 런북** |
 
 ---
 
@@ -143,10 +144,14 @@ eas build --profile production --platform android
 
 ## MVP 스코프
 
-**포함** — Cycle 기반 AI 스케줄링(생활패턴 프리셋 + 자연어 보정) · 단식 타이머 · ICS 내보내기 ·
-단식/식사 기록 · 하이브리드 푸드 스캐너(Gemini + 식약처 DB) · 주간 AI 코칭 · FCM 푸시 · Freemium 페이월
+**포함** — Cycle 기반 AI 스케줄링(생활패턴 프리셋 9종 + 자연어 보정) · 단식 타이머 · ICS 내보내기 ·
+단식/식사 기록 · 하이브리드 푸드 스캐너(Gemini + 식약처 DB) · 주간 AI 코칭 · FCM 푸시
 
-**V2 이연** — 홈 화면 위젯 · B2B 체육관 리포트 · 제휴 커머스 카드 · 완전 자유형 3교대 자연어 파싱
+**⛔ 수익화 없음** — 운영자의 복무 사정으로 MVP는 **무료로만** 배포합니다. 인앱 결제·구독·광고를
+운영하지 않습니다. 사진 분석만 비용 방어를 위해 하루 3회로 제한합니다.
+→ [`docs/07_MONETIZATION_DEFERRED.md`](docs/07_MONETIZATION_DEFERRED.md)
+
+**V2 이연** — 홈 화면 위젯 · B2B 체육관 리포트 · 제휴 커머스 카드 · 완전 자유형 3교대 자연어 파싱 · 결제
 
 ---
 

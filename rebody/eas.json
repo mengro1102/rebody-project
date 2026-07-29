@@ -28,7 +28,8 @@
       },
       "env": {
         "EXPO_PUBLIC_ENV": "preview",
-        "EXPO_PUBLIC_BILLING_MODE": "live"
+        "//env": "수익화 보류 중이라 mock 고정 (docs/07_MONETIZATION_DEFERRED.md).",
+        "EXPO_PUBLIC_BILLING_MODE": "mock"
       }
     },
 
@@ -41,7 +42,8 @@
       },
       "env": {
         "EXPO_PUBLIC_ENV": "production",
-        "EXPO_PUBLIC_BILLING_MODE": "live"
+        "//env": "수익화 보류 중이라 mock 고정 (docs/07_MONETIZATION_DEFERRED.md).",
+        "EXPO_PUBLIC_BILLING_MODE": "mock"
       }
     }
   },

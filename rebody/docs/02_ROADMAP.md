@@ -5,7 +5,7 @@
 > 주간 직장인 · 학생 · 알바 · 프리랜서 · 은퇴자 · 재택 · 시차가 바뀌는 출장자 · 2·3교대 근무자를
 > 하나의 사이클 엔진으로 전부 덮습니다. 교대근무는 **가장 어려운 케이스이자 신뢰의 증거**로 쓰되,
 > 스토어 문구와 온보딩의 1순위 문장은 일반 사용자 언어여야 합니다.
-> 이 결정이 코드에 미치는 영향은 `06_MY_TASKS.md`의 **M1.6**에 항목으로 정리했습니다.
+> 코드 반영은 완료됐습니다 (`06_MY_TASKS.md`의 **D3**).
 
 원문 착수 문서의 Phase 1~7을 유지하되, **Phase 0(법무·계정 선행)** 을 신설하고
 **Phase 3a(스캐너 정확도 스파이크)** 를 Phase 2보다 앞으로 당겼습니다. 근거는 `00_ANALYSIS.md` §3.
@@ -21,7 +21,7 @@ Phase 2  스케줄 온보딩 + 타이머  ✅ 구현됨
 Phase 3b 스캐너 UI              ✅ 구현됨
 Phase 4  주간 AI 코칭           ✅ 구현됨
 Phase 5  FCM 푸시               ✅ 구현됨
-Phase 6  페이월 (Play Billing)  ⚠️ Play Console 등록 후에만 실동작
+Phase 6  페이월 (Play Billing)  ⛔ 철회 — 복무 중 무료 배포 (07_MONETIZATION_DEFERRED.md)
 Phase 7  QA · 스토어 출시 준비    📄 문서 구비됨
 ```
 
@@ -91,7 +91,8 @@ npm test                              # 스케줄러 유닛 테스트
 
 ## Phase 2 — 스케줄 온보딩 + 타이머 ✅
 
-- 프리셋 4종: 주간 고정 / 야간 고정 / 2교대 / 3교대 → `src/domain/presets.ts`
+- 생활 패턴 프리셋 9종: 매일 같은 리듬(기본) / 주간 직장인 / 학생 / 알바·프리랜서 / 은퇴·재택 /
+  야간 고정 / 2교대 / 3교대 / 출장·시차 → `src/domain/presets.ts`
 - 자연어 보정: `supabase/functions/parse-schedule-nl/` (confidence < 0.6 → 되묻기)
 - 사이클 해석: `src/domain/cycle.ts` (순수 civil-date 연산) + `src/domain/FastingScheduler.ts` (instant 변환)
 - 타이머 대시보드: `src/screens/DashboardScreen.tsx`
@@ -124,7 +125,18 @@ npm test                              # 스케줄러 유닛 테스트
 
 ---
 
-## Phase 6 — 페이월 ⚠️ Play Console 등록 이후
+## Phase 6 — 페이월 ⛔ **철회 (2026-07-29)**
+
+> 운영자가 전문연구요원 복무 중이라 복무 기간에는 수익화를 하지 않습니다.
+> 코드(`purchases.ts`, `PaywallScreen.tsx`, `user_subscriptions`)는 동작 상태로 보존하고
+> `MONETIZATION_ENABLED = false` 하나로 잠갔습니다. 복원 런북은
+> [`07_MONETIZATION_DEFERRED.md`](07_MONETIZATION_DEFERRED.md) §7.
+>
+> **스캔 쿼터(무료 3회/일)는 유지합니다.** 목적이 "유료 전환 유도"에서 "비용 방어"로 바뀌었을 뿐입니다.
+>
+> 아래는 복원 시 참고할 원래 설계입니다.
+
+### (보류) 원래 설계
 
 - RevenueCat + `react-native-purchases` (Google Play Billing 단독)
 - **무료 유지**: 최초 AI 스케줄 생성, 첫 주간 피드백 → 유료 전환 전에 핵심 가치 증명
