@@ -74,7 +74,7 @@ rebody/
 │   │   └── safety.ts           연령·BMI·임신 게이트
 │   ├── store/                  Zustand
 │   ├── screens/                대시보드 · 온보딩 · 스캐너 · 알림설정 · 페이월
-│   ├── components/             FeedbackCard
+│   ├── components/             FeedbackCard · StateView · ErrorBoundary
 │   ├── features/               notifications(FCM) · billing(RevenueCat)
 │   └── lib/                    supabase · env · analytics · theme
 ├── supabase/
@@ -117,7 +117,7 @@ cp .env.example .env          # Supabase URL / anon key 채우기
 
 # 백엔드
 supabase link --project-ref <ref>
-supabase db push                                   # 마이그레이션 7개
+supabase db push                                   # 마이그레이션 8개
 supabase secrets set --env-file supabase/.env.local # GEMINI / MFDS / FCM
 supabase functions deploy                           # Edge Function 7개
 
