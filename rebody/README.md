@@ -50,6 +50,9 @@ ReBody는 **사용자의 하루가 어떻게 반복되는지(사이클)를 먼�
 | [`docs/05_LAUNCH_CHECKLIST.md`](docs/05_LAUNCH_CHECKLIST.md) | 출시 체크리스트 |
 | [`docs/06_MY_TASKS.md`](docs/06_MY_TASKS.md) | **내가 해야 할 일 — 개발 트랙 D1~D6 / 배포 트랙 R0~R5** |
 | [`docs/07_MONETIZATION_DEFERRED.md`](docs/07_MONETIZATION_DEFERRED.md) | **수익화 보류 결정과 복원 런북** |
+| [`docs/08_TESTER_GUIDE.md`](docs/08_TESTER_GUIDE.md) | 테스터 안내문 · 12명×14일 구간 운영 |
+| [`docs/09_STORE_LISTING.md`](docs/09_STORE_LISTING.md) | Play Console 등록 문구 (복사해서 붙이면 됨) |
+| [`docs/10_FOLLOWUP.md`](docs/10_FOLLOWUP.md) | **⭐ 지금 내가 해야 할 것 — 여기서 시작** |
 
 ---
 
@@ -77,8 +80,11 @@ rebody/
 ├── supabase/
 │   ├── migrations/             스키마 · RLS · 함수 · cron
 │   └── functions/              Edge Functions 7개
+├── assets/                     아이콘·스플래시·스토어 그래픽 (스크립트 생성)
+├── eval/                       스캐너 정확도 평가 골든셋
 ├── scripts/
-│   ├── eval-food-scanner.ts    Phase 3a Go/No-Go 게이트
+│   ├── eval-food-scanner.ts    D5 Go/No-Go 게이트
+│   ├── gen-brand-assets.js     브랜드 에셋 생성기
 │   └── probe-mfds.ts           MFDS 응답 필드 자동 검증
 └── __tests__/                  79 tests
 ```
