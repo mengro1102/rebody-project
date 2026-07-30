@@ -16,9 +16,11 @@ play-service-account.json
 *.keystore
 *.jks
 
-# 평가용 이미지 (용량)
+# 평가용 이미지 (용량) — eval/README.md와 golden.example.json은 커밋한다
 eval/golden/*.jpg
+eval/golden/*.jpeg
 eval/golden/*.png
+eval/golden.json
 eval/results/
 
 .DS_Store

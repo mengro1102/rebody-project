@@ -5,7 +5,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -26,12 +25,13 @@ import { sumMacros } from "@/domain/nutrition";
 import { MEDICAL_DISCLAIMER } from "@/domain/safety";
 import { colors, radius, spacing, typography } from "@/lib/theme";
 import { FeedbackCard } from "@/components/FeedbackCard";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateView";
 
 export default function DashboardScreen() {
   const profile = useAuthStore((s) => s.profile);
   const timezone = profile?.timezone ?? "Asia/Seoul";
 
-  const { pattern, loading, load, todayPlan } = useScheduleStore();
+  const { pattern, loading, error, load, todayPlan } = useScheduleStore();
   const fasting = useFastingStore();
   const meals = useMealStore();
 
@@ -81,22 +81,28 @@ export default function DashboardScreen() {
     [meals.todayMeals],
   );
 
-  if (loading && !pattern) {
+  if (loading && !pattern) return <LoadingState label="스케줄을 불러오는 중이에요" />;
+
+  // 오류를 조용히 삼키면 사용자는 "스케줄이 없다"고 오해한다. 원인과 재시도를 함께 준다.
+  if (error && !pattern) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.eating} />
-      </View>
+      <ErrorState
+        message={error}
+        onRetry={() => void load(timezone)}
+        hint="기록한 단식·식사 내역은 서버에 남아 있어요."
+      />
     );
   }
 
   if (!pattern) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.emptyTitle}>스케줄이 아직 없어요</Text>
-        <Text style={styles.emptyBody}>
-          생활 패턴을 등록하면 나에게 맞는 단식 시간을 자동으로 잡아드릴게요.
-        </Text>
-      </View>
+      <EmptyState
+        title="스케줄이 아직 없어요"
+        body={
+          "생활 패턴을 등록하면 나에게 맞는 단식 시간을 자동으로 잡아드릴게요.\n" +
+          "단식이 권장되지 않는 경우에는 식사 기록만으로도 충분히 쓸 수 있어요."
+        }
+      />
     );
   }
 
@@ -276,7 +282,6 @@ function Macro({ label, value }: { label: string; value: number | null }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
-  center: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: spacing.lg },
 
   hero: {
     backgroundColor: colors.surface,
@@ -325,7 +330,6 @@ const styles = StyleSheet.create({
   macroLabel: { ...typography.caption, color: colors.textFaint },
   mealCount: { ...typography.caption, color: colors.textFaint, marginTop: spacing.sm },
 
-  emptyTitle: { ...typography.title, color: colors.text, marginBottom: spacing.sm },
   emptyBody: { ...typography.body, color: colors.textMuted, textAlign: "center", lineHeight: 22 },
 
   disclaimer: {

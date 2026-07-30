@@ -84,12 +84,12 @@
 |---|---|
 | `npm test` | ✅ **79 tests / 4 suites 통과** (D3에서 프리셋 16건 추가) |
 | `npm run typecheck` | ✅ **0 errors** (theme.ts `fontVariant` 1건 수정 완료) |
-| 마이그레이션 7개 · Edge Function 7개 · cron 4건 | ✅ 존재 (D2에서 safety_profile 1건 추가) |
+| 마이그레이션 8개 · Edge Function 7개 · cron 4건 | ✅ 존재 (D2 safety_profile · D4-11 global_ai_budget 추가) |
 | `.gitignore` · `.env.example` | ✅ 복구 완료 (웹 업로드가 점 파일을 누락시켰음) |
 
 | # | 남은 일 | 담당 |
 |---|---|---|
-| D1-1 | `rebody.tar.gz` 레포에서 삭제 | 직접 |
+| D1-1 | `rebody.tar.gz` 레포에서 삭제 | ✅ 완료 (2026-07-29) |
 | D1-2 | 디렉터리 2단(`rebody-project/rebody/…`) 정리 여부 결정 | 직접 |
 | D1-3 | 개인정보처리방침용 **공개** 레포 + GitHub Pages 게시 | 직접 |
 | D1-4 | 방침의 `{{운영자명}}`·`{{이메일주소}}` 치환 → `.env`의 `EXPO_PUBLIC_PRIVACY_POLICY_URL` 갱신 | 직접 |
@@ -112,7 +112,7 @@
 | D2-5 | 계정 삭제 진입점 | ✅ `app/settings/index.tsx` — 2단계 확인 후 `delete_my_account` |
 | D2-6 | ICS 내보내기 | ✅ 설정 → 캘린더로 내보내기 (`text/calendar` 직접 fetch → 공유 시트) |
 | D2-7 | `babel.config.js` | ✅ |
-| D2-8 | `assets/` 4종 | ⚠️ **플레이스홀더 생성됨** — 빌드는 통과합니다. 실제 디자인은 R4-1에서 교체 (`assets/README.md`) |
+| D2-8 | `assets/` 4종 | ✅ **정식 마크로 교체** — `scripts/gen-brand-assets.js`가 생성. 컨셉·제약은 `assets/README.md` |
 
 ### 작업 중 함께 처리한 것
 
@@ -217,14 +217,14 @@ Supabase는 무료이고 승인이 필요 없으므로 **개발 트랙**입니�
 | D4-1 | `supabase init` — `config.toml`이 없어 `link`/`db push`가 바로 실패합니다 |
 | D4-2 | `cp .env.example .env` → URL / anon key 입력 |
 | D4-3 | `supabase link --project-ref <ref>` |
-| D4-4 | `supabase db push` — 마이그레이션 **7개** |
+| D4-4 | `supabase db push` — 마이그레이션 **8개** |
 | D4-5 | Vault 시크릿 등록 (cron이 Edge Function 호출에 사용) |
 | D4-6 | `supabase secrets set --env-file supabase/.env.local` — GEMINI / MFDS / FCM |
 | D4-7 | `supabase functions deploy` — **7개** |
 | D4-8 | **MFDS 실호출 검증** ↓ |
 | D4-9 | **RLS 실측 검증** ↓ |
 | D4-10 | cron 4건 `active=true` 확인 |
-| D4-11 | **전역 Gemini 호출 상한** — 신규. 수익이 0이라 비용이 전액 개인 부담입니다 ↓ |
+| D4-11 | **전역 Gemini 호출 상한** — ✅ 코드 작성 완료. `db push`로 함께 적용됩니다 ↓ |
 
 ```sql
 -- D4-5
@@ -261,8 +261,22 @@ MFDS_SERVICE_KEY=<재발급 키> npx tsx scripts/probe-mfds.ts 김치찌개
 | 타이머·스케줄·리포트 | 영향 없음 (AI를 쓰지 않음) |
 
 중단이 아니라 **격하**여야 합니다. 스캐너가 막혀도 텍스트로 기록은 계속돼야 이탈하지 않습니다.
-구현: `analyze-food-image`가 `consume_scan_quota()` 호출 **직전**에 전역 카운터를 확인.
-마이그레이션 1건(일일 집계 테이블 + 원자적 증가 함수)이 필요합니다. **제게 넘기시면 됩니다.**
+
+**✅ 2026-07-29 구현 완료** (`20260729000100_global_ai_budget.sql` — 마이그레이션 **8개**가 됩니다):
+
+- `app_settings` — 상한값을 DB에 둡니다. 코드 상수로 두면 값을 바꿀 때마다 재배포해야 합니다.
+  `update app_settings set value = '3000' where key = 'ai_daily_call_cap';` 로 즉시 조정됩니다.
+- `ai_usage_daily` + `consume_ai_budget()` / `refund_ai_budget()` — 원자적 증가, 실패 시 환불
+- **Gemini를 호출하는 3개 함수 전부에 적용**: `analyze-food-image`(스캔),
+  `parse-schedule-nl`(문장 보정), `generate-weekly-feedback`(주간 배치).
+  주간 배치는 cron으로 수백 건이 한 번에 나가므로 여기서 막지 않으면 하루 상한을 혼자 다 씁니다.
+- `ai_usage_recent` 뷰 — 최근 30일 사용량과 **추정 비용(USD)**. 월 청구액을 이 합계와 대조하세요.
+
+배포 후 확인:
+```sql
+select * from ai_usage_recent;      -- 사용량·추정 비용
+select * from app_settings;         -- 현재 상한
+```
 
 **게이트**: D4-8 전부 OK + D4-9 통과 + cron 4건 active + 전역 상한 동작 확인.
 
@@ -274,8 +288,8 @@ MFDS_SERVICE_KEY=<재발급 키> npx tsx scripts/probe-mfds.ts 김치찌개
 
 | # | 할 일 |
 |---|---|
-| D5-1 | `eval/golden/` 생성 후 한식 사진 30~50장 (현재 `eval/`은 없음) |
-| D5-2 | `eval/golden.json`에 정답 라벨 |
+| D5-1 | 한식 사진 30~50장을 `eval/golden/`에 넣기 — ✅ 스캐폴딩·수집 가이드 준비됨 (`eval/README.md`) |
+| D5-2 | `cp eval/golden.example.json eval/golden.json` → 정답 라벨 작성 |
 | D5-3 | 테스트 계정을 `plan_type='pro'`로 (쿼터 우회) |
 | D5-4 | `EVAL_USER_JWT` · `SUPABASE_URL` · `SUPABASE_ANON_KEY` 설정 |
 | D5-5 | `npm run eval:scanner` |
@@ -299,20 +313,34 @@ MFDS_SERVICE_KEY=<재발급 키> npx tsx scripts/probe-mfds.ts 김치찌개
 
 ---
 
-## D6 — 안정화 (R3 진입 전 필수)
+## D6 — 안정화 (R3 진입 전 필수) — 코드 작업 완료
 
 **R3에서 12명이 14일을 버텨야 하고, 중간 이탈은 카운터를 리셋시킵니다.**
-크래시 한 번이 2주를 날립니다. R3 직전에 이 단계를 반드시 두세요.
+크래시 한 번이 2주를 날립니다.
 
-| # | 할 일 |
-|---|---|
-| D6-1 | Crashlytics 연동 + 첫 크래시 수신 확인 (테스터 이탈 원인을 봐야 함) |
-| D6-2 | 빈 상태·에러 상태 화면 (네트워크 끊김, Supabase 슬립, 스캔 실패) |
-| D6-3 | `keepalive-ping` 동작 확인 — 무료 티어 일시정지 시 테스터 전원이 동시에 막힘 |
-| D6-4 | 앱 최초 실행 → 스케줄 생성까지 **이탈 없이 90초 이내** |
-| D6-5 | 테스터용 1페이지 안내문 (설치 링크·테스트 요청 사항·피드백 채널) |
+| # | 할 일 | 상태 |
+|---|---|---|
+| D6-1 | 크래시 리포팅 | ✅ **어댑터 완료** (`src/lib/crash.ts` + `ErrorBoundary`). 네이티브 Crashlytics 연결은 R1 이후 — 아래 참조 |
+| D6-2 | 빈 상태·에러 상태 화면 | ✅ `src/components/StateView.tsx` — 네트워크 끊김 / **Supabase 슬립** / 세션 만료를 각각 다른 문장으로 안내 |
+| D6-3 | `keepalive-ping` 동작 확인 | ⬜ 배포 후에만 가능 (D4 이후) |
+| D6-4 | 최초 실행 → 스케줄 생성 90초 이내 | ✅ 경로상 확보 — 기본 프리셋 선택 + 질문 1개(기상 시각)로 단축됨 (D3) |
+| D6-5 | 테스터용 안내문 | ✅ [`08_TESTER_GUIDE.md`](08_TESTER_GUIDE.md) — 복사해서 보낼 문구 + 일일 체크리스트 |
 
-**게이트**: 본인 기기에서 3일 연속 사용해 크래시 0건.
+### D6-1 상세 — Crashlytics는 왜 반쪽인가
+
+`@react-native-firebase/crashlytics`는 네이티브 모듈이라 development build와 `google-services.json`이
+있어야 동작합니다. 그래서 **어댑터만 먼저** 만들어 뒀습니다 (`analytics.ts`와 같은 구조).
+
+- 지금: 렌더 예외를 `ErrorBoundary`가 잡아 설명 화면 + 복구 버튼을 보여줍니다.
+  프로덕션의 흰 화면은 그대로 이탈로 이어지므로 이것만으로도 값이 있습니다.
+- R1 이후 할 일: `npx expo install @react-native-firebase/app @react-native-firebase/crashlytics`
+  → `app/_layout.tsx`에서 `initCrashReporting(crashlytics())` 한 줄 추가.
+- 게이트 진입/이탈은 이미 `breadcrumb()`으로 남고 있어, 연결하는 순간 경로가 함께 올라갑니다.
+
+> ⚠️ 리포트에 건강 데이터·음식명·칼로리를 절대 싣지 마세요. Data Safety 신고와 어긋나면 정책 위반입니다.
+> 어댑터 주석에도 같은 경고를 달아 두었습니다.
+
+**게이트**: 본인 기기에서 3일 연속 사용해 크래시 0건 (R1 이후 확인).
 
 ---
 
@@ -413,7 +441,7 @@ Play Console의 내부 테스트 트랙은 **최대 100명, 심사 없이 즉시
 |---|---|
 | R3-1 | 비공개 테스트 트랙 생성 → 테스터 이메일 목록(화이트리스트) 등록 |
 | R3-2 | **12명 이상 모집** — 초대만으로는 0명입니다. 각자 초대 수락 + **실제 설치**까지 확인 |
-| R3-3 | D6-5 안내문 배포 + 설치 확인 회신 받기 |
+| R3-3 | ✅ 안내문 준비됨 → [`08_TESTER_GUIDE.md`](08_TESTER_GUIDE.md) §2를 복사해서 발송 · 설치 확인 회신 받기 |
 | R3-4 | **14일 연속** 유지 — 중간 이탈자 발생 시 즉시 보충 (여유 있게 15~16명 권장) |
 | R3-5 | 매일 Play Console에서 opt-in 인원 수 확인 |
 | R3-6 | 피드백 수집 → 치명적 버그만 `eas update`로 즉시 반영 (빌드 쿼터 절약) |
@@ -438,14 +466,14 @@ R3의 14일 동안 병렬로 준비하세요. 심사는 3개 섹션 질문지에
 
 | # | 할 일 |
 |---|---|
-| R4-1 | 앱 아이콘 512×512 + D2-8의 `assets/` 4종 (Figma 무료) |
-| R4-2 | 피처 그래픽 1024×500 |
+| R4-1 | ✅ 앱 아이콘 512×512 · `assets/store/icon-512.png` (스크립트 생성) |
+| R4-2 | ✅ 피처 그래픽 1024×500 · `assets/store/feature-graphic-1024x500.png` — **문구만 Figma에서 얹으면 됨** |
 | R4-3 | 스크린샷 4~8장 (대시보드 / 스캐너 결과 / 주간 리포트 / 온보딩) |
-| R4-4 | 짧은 설명 80자 · 자세한 설명 4000자 — **1순위 문장은 일반 사용자 언어로** (D3 포지셔닝) |
+| R4-4 | ✅ **문구 작성 완료** → [`09_STORE_LISTING.md`](09_STORE_LISTING.md) 복사해서 붙이면 됩니다 (짧은 설명 55자 / 자세한 설명 2,072자) |
 | R4-5 | **Data Safety 신고** — `docs/03_DATA_SAFETY.md` 표를 그대로 |
 | R4-6 | 콘텐츠 등급 설문 · 카테고리(건강/피트니스) · 타겟 연령 18세 이상 |
 | R4-7 | 건강 앱 추가 선언 (의료기기 아님 + 안전장치 설명) |
-| R4-8 | ASO 키워드 — `간헐적단식/16:8/공복/다이어트 식단`을 1순위, `교대근무/야간근무`는 롱테일 |
+| R4-8 | ✅ ASO 키워드 우선순위 확정 → `09_STORE_LISTING.md` §4 |
 | R4-9 | 프로덕션 접근 신청서 제출 (테스트 과정·프로덕션 준비 상태 서술) |
 
 ### 설명문에 쓰면 안 되는 표현

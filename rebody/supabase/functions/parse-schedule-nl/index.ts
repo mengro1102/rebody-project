@@ -12,6 +12,7 @@
 import { fail, json, preflight, shortId } from "../_shared/http.ts";
 import { adminClient, requireUser } from "../_shared/supabase.ts";
 import { generateJSON, GeminiError, withRetry } from "../_shared/gemini.ts";
+import { consumeAiBudget, refundAiBudget } from "../_shared/budget.ts";
 
 const CONFIDENCE_THRESHOLD = 0.6;
 
@@ -144,6 +145,18 @@ Deno.serve(async (req) => {
     text.trim(),
   ].join("\n");
 
+  // 전역 AI 예산 (docs/07_MONETIZATION_DEFERRED.md §5).
+  // 상한에 닿으면 프리셋 값은 이미 저장돼 있으므로 "직접 수정" 경로로 안내한다.
+  const budget = await consumeAiBudget(supabase, "nl");
+  if (!budget.allowed) {
+    return fail(
+      "ai_budget_exhausted",
+      "지금은 문장 분석이 잠시 쉬고 있어요. 선택한 프리셋은 그대로 저장돼 있으니 " +
+        "설정에서 직접 조정하시거나 자정 이후 다시 시도해 주세요.",
+      503,
+    );
+  }
+
   let result: ParseResult;
   let usage;
   try {
@@ -160,6 +173,7 @@ Deno.serve(async (req) => {
     result = out.data;
     usage = out.usage;
   } catch (e) {
+    await refundAiBudget(supabase, "nl");
     const ge = e instanceof GeminiError ? e : null;
     console.error(`[parse-schedule-nl] user=${shortId(user.id)} 실패:`, e);
     return fail(

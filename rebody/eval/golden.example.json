@@ -1,0 +1,12 @@
+[
+  { "file": "01.jpg", "food_name": "김치찌개", "calories": 320 },
+  { "file": "02.jpg", "food_name": "제육볶음", "calories": 450 },
+  { "file": "03.jpg", "food_name": "비빔밥", "calories": 560 },
+  { "file": "04.jpg", "food_name": "닭가슴살", "calories": 165 },
+  { "file": "05.jpg", "food_name": "된장찌개", "calories": 180 },
+  { "file": "06.jpg", "food_name": "김치볶음밥", "calories": 490 },
+  { "file": "07.jpg", "food_name": "삼겹살", "calories": 520 },
+  { "file": "08.jpg", "food_name": "순두부찌개", "calories": 250 },
+  { "file": "09.jpg", "food_name": "불고기", "calories": 380 },
+  { "file": "10.jpg", "food_name": "냉면", "calories": 480 }
+]

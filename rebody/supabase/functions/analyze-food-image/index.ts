@@ -18,6 +18,7 @@ import { adminClient, requireUser } from "../_shared/supabase.ts";
 import { generateJSON, GeminiError, withRetry } from "../_shared/gemini.ts";
 import { lookupMfds } from "../_shared/mfds.ts";
 import { normalizeFoodName } from "../_shared/normalize.ts";
+import { consumeAiBudget, refundAiBudget } from "../_shared/budget.ts";
 
 const FREE_DAILY_SCANS = 3;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -134,9 +135,25 @@ Deno.serve(async (req) => {
   if (!q?.allowed) {
     return fail(
       "quota_exceeded",
-      `무료 플랜은 하루 ${FREE_DAILY_SCANS}회까지 스캔할 수 있어요. 내일 다시 이용하거나 Pro로 업그레이드해 주세요.`,
+      `사진 분석은 하루 ${FREE_DAILY_SCANS}회까지 이용할 수 있어요. 자정이 지나면 다시 채워집니다. ` +
+        "그전에도 음식 이름을 직접 입력해 기록하실 수 있어요.",
       402,
       { plan: q?.plan ?? "free", remaining: 0, free_daily_limit: FREE_DAILY_SCANS },
+    );
+  }
+
+  // ── 전역 예산 확인 (사용자 쿼터를 통과한 뒤, Gemini 호출 전) ──
+  // 수익이 0이므로 총 호출량에 천장이 필요하다 (docs/07_MONETIZATION_DEFERRED.md §5).
+  // 상한에 닿아도 앱을 멈추지 않는다 — 스캐너만 격하하고 직접 입력을 안내한다.
+  const budget = await consumeAiBudget(supabase, "scan");
+  if (!budget.allowed) {
+    await supabase.rpc("refund_scan_quota", { p_user_id: user.id, p_local_date: localDate });
+    return fail(
+      "ai_budget_exhausted",
+      "지금은 사진 분석 요청이 많아 잠시 쉬고 있어요. 음식 이름을 직접 입력하면 바로 기록됩니다. " +
+        "자정이 지나면 다시 이용하실 수 있어요.",
+      503,
+      { fallback: "manual_entry", retry_after_utc_midnight: true },
     );
   }
 
@@ -156,8 +173,9 @@ Deno.serve(async (req) => {
     recognized = out.data.items ?? [];
     console.log(`[analyze-food] user=${shortId(user.id)} items=${recognized.length} tokens=${out.usage.totalTokens}`);
   } catch (e) {
-    // 실패했으니 쿼터를 돌려준다.
+    // 실패했으니 쿼터와 전역 예산을 모두 돌려준다.
     await supabase.rpc("refund_scan_quota", { p_user_id: user.id, p_local_date: localDate });
+    await refundAiBudget(supabase, "scan");
     const ge = e instanceof GeminiError ? e : null;
     console.error(`[analyze-food] user=${shortId(user.id)} 인식 실패:`, e);
     return fail(
@@ -171,6 +189,8 @@ Deno.serve(async (req) => {
   }
 
   if (recognized.length === 0) {
+    // 사용자 쿼터는 돌려준다(사용자 잘못이 아니다). 전역 예산은 돌려주지 않는다 —
+    // Gemini 호출이 실제로 일어나 비용이 발생했으므로 집계에 남아야 한다.
     await supabase.rpc("refund_scan_quota", { p_user_id: user.id, p_local_date: localDate });
     return fail(
       "no_food_detected",

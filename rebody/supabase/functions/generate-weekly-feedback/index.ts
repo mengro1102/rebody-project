@@ -16,6 +16,7 @@
 import { fail, json, preflight, shortId } from "../_shared/http.ts";
 import { adminClient, isServiceRoleCall, requireUser } from "../_shared/supabase.ts";
 import { generateJSON, GeminiError, withRetry } from "../_shared/gemini.ts";
+import { consumeAiBudget, refundAiBudget } from "../_shared/budget.ts";
 
 const SYSTEM_INSTRUCTION = `당신은 교대근무자의 식사·단식 습관을 돕는 한국어 코치입니다.
 
@@ -134,6 +135,14 @@ Deno.serve(async (req) => {
       continue;
     }
 
+    // 전역 AI 예산. cron으로 도는 배치라 한 번에 수백 건이 나갈 수 있어
+    // 여기서 막지 않으면 하루 상한을 이 함수 하나가 다 써버린다.
+    const budget = await consumeAiBudget(supabase, "feedback");
+    if (!budget.allowed) {
+      skipped.push({ user_id: shortId(userId), reason: "budget_capped" });
+      continue;
+    }
+
     let out: FeedbackOut;
     try {
       const res = await withRetry(() =>
@@ -147,6 +156,7 @@ Deno.serve(async (req) => {
         }), 2);
       out = res.data;
     } catch (e) {
+      await refundAiBudget(supabase, "feedback");
       const ge = e instanceof GeminiError ? e : null;
       console.error(`[weekly-feedback] user=${shortId(userId)} 실패:`, ge?.message ?? e);
       skipped.push({ user_id: shortId(userId), reason: "ai_failed" });

@@ -23,6 +23,8 @@ import {
 } from "@/store/useAuthStore";
 import { handleNotificationResponse, setupChannels } from "@/features/notifications/registerPush";
 import { initBilling } from "@/features/billing/purchases";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { breadcrumb } from "@/lib/crash";
 import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
@@ -42,6 +44,8 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
+      {/* 렌더 예외를 여기서 잡는다. 프로덕션의 흰 화면은 그대로 이탈로 이어진다. */}
+      <ErrorBoundary onReset={() => router.replace("/")}>
       {initialized ? (
         <Stack
           screenOptions={{
@@ -57,7 +61,8 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding/profile" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="onboarding/schedule" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="scanner" options={{ title: "음식 기록", presentation: "modal" }} />
-          <Stack.Screen name="paywall" options={{ title: "ReBody Pro", presentation: "modal" }} />
+          {/* 수익화 보류 중이라 제목도 "Pro"가 아니다 (docs/07_MONETIZATION_DEFERRED.md) */}
+          <Stack.Screen name="paywall" options={{ title: "이용 안내", presentation: "modal" }} />
           <Stack.Screen name="feedback" options={{ title: "주간 리포트" }} />
           <Stack.Screen name="settings/index" options={{ title: "설정" }} />
           <Stack.Screen name="settings/notifications" options={{ title: "알림 설정" }} />
@@ -66,6 +71,7 @@ export default function RootLayout() {
       ) : (
         <Splash />
       )}
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
@@ -89,7 +95,11 @@ function useGate() {
 
     const current = "/" + segments.join("/");
     const go = (to: string) => {
-      if (current !== to) router.replace(to);
+      if (current !== to) {
+        // 크래시 스택만으로는 어떤 게이트에서 튕겼는지 알 수 없다.
+        breadcrumb(`gate: ${current} -> ${to}`);
+        router.replace(to);
+      }
     };
 
     if (!session) {
